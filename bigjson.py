@@ -1,4 +1,9 @@
-class BigJSON:
+def load(file):
+    reader = JsonReader(file)
+    return reader.read()
+
+
+class JsonReader:
 
     _WHITESPACE = '\t\n '
     _READBUF_CHUNK_SIZE = 1024*1024
@@ -9,16 +14,116 @@ class BigJSON:
         # This buffer is for reading and peeking
         self.readbuf = ''
 
-        self.root_node = Node(self)
+    def read(self, read_all=False):
+        self._skip_whitespace()
 
-    def __getitem__(self, index):
-        return self.root_node[index]
+        # None
+        if self._skip_if_next('null'):
+            return None
+
+        # False
+        if self._skip_if_next('false'):
+            return False
+
+        # True
+        if self._skip_if_next('true'):
+            return True
+
+        # Number
+        if self._peek() in '-0123456789':
+            num = self._get()
+            # Check sign
+            if num == '-':
+                num += self._get()
+            # Read integer part
+            if num[-1] != '0':
+                while self._peek() in '0123456789':
+                    num += self._get()
+            # Read possible decimal part and convert to float
+            if self._peek() == '.':
+                self._get()
+                num += '.' + self._get()
+                if num[-1] not in '0123456790':
+                    raise Exception('Expected digit after dot!')
+                while self._peek() in '0123456789':
+                    num += self._get()
+                num = float(num)
+            else:
+                num = int(num)
+            # Read possible exponent
+            if self._peek() in 'eE':
+                self._get()
+                exp = self._get()
+                exp_neg = False
+                if exp == '-':
+                    exp_neg = True
+                    exp = self._get()
+                elif exp == '+':
+                    exp = self._get()
+                while self._peek() in '0123456789':
+                    exp += self._get()
+                exp = int(exp)
+                exp = 10 ** exp
+                if exp_neg:
+                    num = float(num) / exp
+                else:
+                    num *= exp
+            return num
+
+        # String
+        if self._skip_if_next('"'):
+            string = u''
+
+            while True:
+                c = self._get()
+
+                if c == u'"':
+                    break
+
+                if c == u'\\':
+                    c = self._get()
+                    if c == u'"':
+                        string += u'"'
+                    elif c == u'\\':
+                        string += u'\\'
+                    elif c == u'/':
+                        string += u'/'
+                    elif c == u'b':
+                        string += u'\b'
+                    elif c == u'f':
+                        string += u'\f'
+                    elif c == u'n':
+                        string += u'\n'
+                    elif c == u'r':
+                        string += u'\r'
+                    elif c == u't':
+                        string += u'\t'
+                    elif c == u'u':
+                        unicode_bytes = self._read(4)
+                        string += ('\\u' + unicode_bytes).decode('unicode_escape')
+                    else:
+                        raise Exception(u'Unexpected {} in backslash encoding!'.format(c))
+
+                else:
+                    string += c
+
+            return string
+
+        # Array
+        if self._peek() == '[':
+            return Array(self, read_all)
+
+        # Object
+        if self._peek() == '{':
+            return Object(self, read_all)
+
+        raise Exception('Unexpected bytes!')
 
     def _skip_whitespace(self):
         while True:
             # Read whitespace from current readbuffer
             whitespace_in_readbuf = 0
-            while whitespace_in_readbuf < len(self.readbuf) and self.readbuf[whitespace_in_readbuf] in BigJSON._WHITESPACE:
+            while whitespace_in_readbuf < len(self.readbuf) and self.readbuf[whitespace_in_readbuf] in JsonReader._WHITESPACE:
                 whitespace_in_readbuf += 1
             self.readbuf = self.readbuf[whitespace_in_readbuf:]
 
@@ -27,7 +132,7 @@ class BigJSON:
                 return
 
             # Readbuffer is empty, so load more
-            self._fill_readbuf(BigJSON._READBUF_CHUNK_SIZE)
+            self._fill_readbuf(JsonReader._READBUF_CHUNK_SIZE)
 
     def _get(self):
         self._fill_readbuf(1)
@@ -77,272 +182,148 @@ class BigJSON:
         self.file.seek(pos)
 
 
-class Node:
+class Array:
 
-    TYPE_NULL = 0
-    TYPE_FALSE = 1
-    TYPE_TRUE = 2
-    TYPE_NUMBER = 3
-    TYPE_STRING = 4
-    TYPE_ARRAY = 5
-    TYPE_OBJECT = 6
+    def __init__(self, reader, read_all):
+        self.reader = reader
+        self.begin_pos = self.reader._tell_read_pos()
 
-    def __init__(self, bj):
-        self.bj = bj
-
-        self.bj._skip_whitespace()
-
-        # Read part of file to analyze type of it
-        if self.bj._skip_if_next('null'):
-            self.type = Node.TYPE_NULL
-
-        elif self.bj._skip_if_next('false'):
-            self.type = Node.TYPE_FALSE
-
-        elif self.bj._skip_if_next('true'):
-            self.type = Node.TYPE_TRUE
-
-        elif self.bj._peek() in '-0123456789':
-            self.type = Node.TYPE_NUMBER
-            num = self.bj._get()
-            # Check sign
-            if num == '-':
-                num += self.bj._get()
-            # Read integer part
-            if num[-1] != '0':
-                while self.bj._peek() in '0123456789':
-                    num += self.bj._get()
-            # Read possible decimal part and convert to float
-            if self.bj._peek() == '.':
-                self.bj._get()
-                num += '.' + self.bj._get()
-                if num[-1] not in '0123456790':
-                    raise Exception('Expected digit after dot!')
-                while self.bj._peek() in '0123456789':
-                    num += self.bj._get()
-                self.number = float(num)
-            else:
-                self.number = int(num)
-            # Read possible exponent
-            if self.bj._peek() in 'eE':
-                self.bj._get()
-                exp = self.bj._get()
-                exp_neg = False
-                if exp == '-':
-                    exp_neg = True
-                    exp = self.bj._get()
-                elif exp == '+':
-                    exp = self.bj._get()
-                while self.bj._peek() in '0123456789':
-                    exp += self.bj._get()
-                exp = int(exp)
-                exp = 10 ** exp
-                if exp_neg:
-                    self.number = float(self.number) / exp
-                else:
-                    self.number *= exp
-
-        elif self.bj._skip_if_next('"'):
-            self.type = Node.TYPE_STRING
-
-            self.string = u''
-
-            while True:
-                c = self.bj._get()
-
-                if c == u'"':
-                    break
-
-                if c == u'\\':
-                    c = self.bj._get()
-                    if c == u'"':
-                        self.string += u'"'
-                    elif c == u'\\':
-                        self.string += u'\\'
-                    elif c == u'/':
-                        self.string += u'/'
-                    elif c == u'b':
-                        self.string += u'\b'
-                    elif c == u'f':
-                        self.string += u'\f'
-                    elif c == u'n':
-                        self.string += u'\n'
-                    elif c == u'r':
-                        self.string += u'\r'
-                    elif c == u't':
-                        self.string += u'\t'
-                    elif c == u'u':
-                        unicode_bytes = self.bj._read(4)
-                        self.string += ('\\u' + unicode_bytes).decode('unicode_escape')
-                    else:
-                        raise Exception(u'Unexpected {} in backslash encoding!'.format(c))
-
-                else:
-                    self.string += c
-
-        elif self.bj._skip_if_next('['):
-            self.type = Node.TYPE_ARRAY
-            self.fully_read = False
-            # TODO: Replace this single lookup position with some kind of lookup table!
-            self.children_begin = self.bj._tell_read_pos()
-
-        elif self.bj._skip_if_next('{'):
-            self.type = Node.TYPE_OBJECT
-            self.fully_read = False
-            # TODO: Replace this single lookup position with some kind of lookup table!
-            self.children_begin = self.bj._tell_read_pos()
-
-        else:
-            raise Exception('Unexpected bytes!')
-
-    def get_type(self):
-        return ['null', 'false', 'true', 'number', 'string', 'array', 'object'][self.type]
-
-    def __getitem__(self, index):
-        if self.type == Node.TYPE_ARRAY:
-
-            # TODO: Support negative indexes!
-
-            # Rewind to requested child
-            self.bj._seek(self.children_begin)
-            self.bj._skip_whitespace()
-            while True:
-                if self.bj._is_next(']'):
-                    raise IndexError('Out of range!')
-
-                child = Node(self.bj)
-                child._read_fully()
-
-                if index == 0:
-                    return child._get_value()
-
-                # Skip comma and whitespace around it
-                self.bj._skip_whitespace()
-                if not self.bj._skip_if_next(','):
-                    raise IndexError('Out of range!')
-                self.bj._skip_whitespace()
-
-                index -= 1
-
-        elif self.type == Node.TYPE_OBJECT:
-
-            if not isinstance(index, basestring):
-                raise TypeError(u'Key must be string!')
-
-            # Rewind to requested child
-            self.bj._seek(self.children_begin)
-            self.bj._skip_whitespace()
-
-            if self.bj._is_next('}'):
-                raise KeyError('Key not found!')
-
-            while True:
-
-                # Read key
-                key = Node(self.bj)
-                if key.type != Node.TYPE_STRING:
-                    raise Exception('Invalid key type in JSON!')
-
-                # Read colon
-                self.bj._skip_whitespace()
-                if not self.bj._skip_if_next(':'):
-                    raise Exception('Missing ":"!')
-                self.bj._skip_whitespace()
-
-                # Read child and return it if the key matches.
-                child = Node(self.bj)
-                child._read_fully()
-                if key._get_value() == index:
-                    return child._get_value()
-
-                # Read comma or "}"
-                self.bj._skip_whitespace()
-                if self.bj._skip_if_next(','):
-                    self.bj._skip_whitespace()
-                elif self.bj._is_next('}'):
-                    raise KeyError('Key not found!')
-                else:
-                    raise Exception('Expected "," or "}"!')
-
-        elif self.type == Node.TYPE_STRING:
-
-            return self.string[index]
-
-        else:
-
-            raise Exception('Index operator does not work with type "{}"!'.format(self.get_type))
-
-    def _get_value(self):
-        """ If possible, returns basic python object, but
-        with complex Nodes, returns the Node itself.
-        """
-        if self.type == Node.TYPE_NULL:
-            return None
-        if self.type == Node.TYPE_FALSE:
-            return False
-        if self.type == Node.TYPE_TRUE:
-            return True
-        if self.type == Node.TYPE_NUMBER:
-            return self.number
-        if self.type == Node.TYPE_STRING:
-            return self.string
-        return self
-
-    def _read_fully(self):
-
-        # If already fully read
-        if self.type in [Node.TYPE_NULL, Node.TYPE_FALSE, Node.TYPE_TRUE, Node.TYPE_NUMBER, Node.TYPE_STRING]:
+        if not read_all:
             return
 
-        if self.type == Node.TYPE_ARRAY:
+        if not self.reader._skip_if_next('['):
+            raise Exception('Missing "["!')
 
-            self.bj._seek(self.children_begin)
-            self.bj._skip_whitespace()
-            if self.bj._skip_if_next(']'):
-                return
-            while True:
-                child = Node(self.bj)
-                child._read_fully()
+        self.reader._skip_whitespace()
 
-                # Skip comma and whitespace around it
-                self.bj._skip_whitespace()
-                if self.bj._skip_if_next(','):
-                    self.bj._skip_whitespace()
-                elif self.bj._skip_if_next(']'):
-                    break
-                else:
-                    raise Exception('Expected "," or "]"!')
+        if self.reader._skip_if_next(']'):
+            return
 
-        else:
+        while True:
+            # Skip elements
+            self.reader.read(read_all=True)
 
-            self.bj._seek(self.children_begin)
-            self.bj._skip_whitespace()
+            # Skip comma or "]" and whitespace around it
+            self.reader._skip_whitespace()
+            if self.reader._skip_if_next(','):
+                self.reader._skip_whitespace()
+            elif self.reader._skip_if_next(']'):
+                break
+            else:
+                raise Exception('Expected "," or "]"!')
 
-            if self.bj._skip_if_next('}'):
-                return
+    def __getitem__(self, index):
+        # TODO: Support negative indexes!
 
-            while True:
+        # TODO: Use some kind of lookup table!
 
-                # Read key
-                key = Node(self.bj)
-                if key.type != Node.TYPE_STRING:
-                    raise Exception('Invalid key type in JSON!')
+        # Rewind to requested element from the beginning
+        self.reader._seek(self.begin_pos)
+        if not self.reader._skip_if_next('['):
+            raise Exception('Missing "["!')
+        self.reader._skip_whitespace()
 
-                # Read colon
-                self.bj._skip_whitespace()
-                if not self.bj._skip_if_next(':'):
-                    raise Exception('Missing ":"!')
-                self.bj._skip_whitespace()
+        if self.reader._is_next(']'):
+            raise IndexError('Out of range!')
 
-                # Read child
-                child = Node(self.bj)
-                child._read_fully()
+        while True:
+            element = self.reader.read(read_all=True)
 
-                # Read comma or "}"
-                self.bj._skip_whitespace()
-                if self.bj._skip_if_next(','):
-                    self.bj._skip_whitespace()
-                elif self.bj._skip_if_next('}'):
-                    break
-                else:
-                    raise Exception('Expected "," or "}"!')
+            if index == 0:
+                return element
+
+            # Skip comma and whitespace around it
+            self.reader._skip_whitespace()
+            if self.reader._skip_if_next(','):
+                self.reader._skip_whitespace()
+            elif self.reader._is_next(']'):
+                raise IndexError('Out of range!')
+            else:
+                raise Exception('Expected "," or "]"!')
+
+            index -= 1
+
+
+class Object:
+
+    def __init__(self, reader, read_all):
+        self.reader = reader
+        self.begin_pos = self.reader._tell_read_pos()
+
+        if not read_all:
+            return
+
+        if not self.reader._skip_if_next('{'):
+            raise Exception('Missing "{"!')
+
+        self.reader._skip_whitespace()
+
+        if self.reader._skip_if_next('}'):
+            return
+
+        while True:
+            # Skip key. Reading all is not required, because strings
+            # are read fully anyway, and if it is not string, then
+            # there is an error and reading can be canceled.
+            key = self.reader.read(read_all=False)
+            if not isinstance(key, basestring):
+                raise Exception('Invalid key type in JSON object!')
+
+            # Skip colon and whitespace around it
+            self.reader._skip_whitespace()
+            if not self.reader._skip_if_next(':'):
+                raise Exception('Missing ":"!')
+            self.reader._skip_whitespace()
+
+            # Skip value
+            self.reader.read(read_all=True)
+
+            # Read comma or "}" and whitespace around it.
+            self.reader._skip_whitespace()
+            if self.reader._skip_if_next(','):
+                self.reader._skip_whitespace()
+            elif self.reader._skip_if_next('}'):
+                break
+            else:
+                raise Exception('Expected "," or "}"!')
+
+    def __getitem__(self, key):
+
+        if not isinstance(key, basestring):
+            raise TypeError(u'Key must be string!')
+
+        # TODO: Use some kind of lookup table!
+
+        # Rewind to requested element from the beginning
+        self.reader._seek(self.begin_pos)
+        if not self.reader._skip_if_next('{'):
+            raise Exception('Missing "{"!')
+        self.reader._skip_whitespace()
+
+        if self.reader._is_next('}'):
+            raise KeyError('Key not found!')
+
+        while True:
+            key2 = self.reader.read(read_all=False)
+            if not isinstance(key2, basestring):
+                raise Exception('Invalid key type in JSON object!')
+
+            # Read colon
+            self.reader._skip_whitespace()
+            if not self.reader._skip_if_next(':'):
+                raise Exception('Missing ":"!')
+            self.reader._skip_whitespace()
+
+            # Read value and return it if the key matches.
+            value = self.reader.read(read_all=True)
+            if key2 == key:
+                return value
+
+            # Skip comma and whitespace around it
+            self.reader._skip_whitespace()
+            if self.reader._skip_if_next(','):
+                self.reader._skip_whitespace()
+            elif self.reader._is_next('}'):
+                raise KeyError('Key not found!')
+            else:
+                raise Exception('Expected "," or "}"!')
