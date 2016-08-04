@@ -187,9 +187,20 @@ class Array:
     def __init__(self, reader, read_all):
         self.reader = reader
         self.begin_pos = self.reader._tell_read_pos()
+        self.length = -1
 
         if not read_all:
             return
+
+        self._read_all()
+
+    def _read_all(self):
+        """ Reads and validates all bytes in
+        the Array. Also counts its length.
+        """
+        self.length = 0
+
+        self.reader._seek(self.begin_pos)
 
         if not self.reader._skip_if_next('['):
             raise Exception('Missing "["!')
@@ -200,8 +211,10 @@ class Array:
             return
 
         while True:
-            # Skip elements
+            # Skip element
             self.reader.read(read_all=True)
+
+            self.length += 1
 
             # Skip comma or "]" and whitespace around it
             self.reader._skip_whitespace()
@@ -243,15 +256,31 @@ class Array:
 
             index -= 1
 
+    def __len__(self):
+        if self.length < 0:
+            self._read_all()
+        return self.length
+
 
 class Object:
 
     def __init__(self, reader, read_all):
         self.reader = reader
         self.begin_pos = self.reader._tell_read_pos()
+        self.length = -1
 
         if not read_all:
             return
+
+        self._read_all()
+
+    def _read_all(self):
+        """ Reads and validates all bytes in
+        the Object. Also counts its length.
+        """
+        self.length = 0
+
+        self.reader._seek(self.begin_pos)
 
         if not self.reader._skip_if_next('{'):
             raise Exception('Missing "{"!')
@@ -277,6 +306,8 @@ class Object:
 
             # Skip value
             self.reader.read(read_all=True)
+
+            self.length += 1
 
             # Read comma or "}" and whitespace around it.
             self.reader._skip_whitespace()
@@ -327,3 +358,8 @@ class Object:
                 raise KeyError('Key not found!')
             else:
                 raise Exception('Expected "," or "}"!')
+
+    def __len__(self):
+        if self.length < 0:
+            self._read_all()
+        return self.length
