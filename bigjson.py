@@ -37,6 +37,14 @@ class BigJSON:
         self.readbuf = self.readbuf[1:]
         return result
 
+    def _read(self, amount):
+        self._fill_readbuf(amount)
+        if len(self.readbuf) < amount:
+            raise Exception('Unexpected end of file when getting next byte!')
+        result = self.readbuf[:amount]
+        self.readbuf = self.readbuf[amount:]
+        return result
+
     def _peek(self):
         self._fill_readbuf(1)
         if len(self.readbuf) == 0:
@@ -65,7 +73,7 @@ class BigJSON:
         return self.file.tell() - len(self.readbuf)
 
     def _seek(self, pos):
-        self.readbuf = ''
+        self.readbuf = u''
         self.file.seek(pos)
 
 
@@ -134,7 +142,44 @@ class Node:
                 else:
                     self.number *= exp
 
-        # TODO: Check string!
+        elif self.bj._skip_if_next('"'):
+            self.type = Node.TYPE_STRING
+
+            self.string = u''
+
+            while True:
+                c = self.bj._get()
+
+                if c == u'"':
+                    break
+
+                if c == u'\\':
+                    c = self.bj._get()
+                    if c == u'"':
+                        self.string += u'"'
+                    elif c == u'\\':
+                        self.string += u'\\'
+                    elif c == u'/':
+                        self.string += u'/'
+                    elif c == u'b':
+                        self.string += u'\b'
+                    elif c == u'f':
+                        self.string += u'\f'
+                    elif c == u'n':
+                        self.string += u'\n'
+                    elif c == u'r':
+                        self.string += u'\r'
+                    elif c == u't':
+                        self.string += u'\t'
+                    elif c == u'u':
+                        unicode_bytes = self.bj._read(4)
+                        self.string += ('\\u' + unicode_bytes).decode('unicode_escape')
+                    else:
+                        raise Exception(u'Unexpected {} in backslash encoding!'.format(c))
+
+                else:
+                    self.string += c
+
         elif self.bj._skip_if_next('['):
             self.type = Node.TYPE_ARRAY
             self.fully_read = False
