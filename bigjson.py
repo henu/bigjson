@@ -189,7 +189,8 @@ class Node:
         elif self.bj._skip_if_next('{'):
             self.type = Node.TYPE_OBJECT
             self.fully_read = False
-            raise Exception('Not implemented yet!')
+            # TODO: Replace this single lookup position with some kind of lookup table!
+            self.children_begin = self.bj._tell_read_pos()
 
         else:
             raise Exception('Unexpected bytes!')
@@ -225,7 +226,43 @@ class Node:
 
         elif self.type == Node.TYPE_OBJECT:
 
-            raise Exception('NOT IMPLEMENTED YET!')
+            if not isinstance(index, basestring):
+                raise TypeError(u'Key must be string!')
+
+            # Rewind to requested child
+            self.bj._seek(self.children_begin)
+            self.bj._skip_whitespace()
+
+            if self.bj._is_next('}'):
+                raise KeyError('Key not found!')
+
+            while True:
+
+                # Read key
+                key = Node(self.bj)
+                if key.type != Node.TYPE_STRING:
+                    raise Exception('Invalid key type in JSON!')
+
+                # Read colon
+                self.bj._skip_whitespace()
+                if not self.bj._skip_if_next(':'):
+                    raise Exception('Missing ":"!')
+                self.bj._skip_whitespace()
+
+                # Read child and return it if the key matches.
+                child = Node(self.bj)
+                child._read_fully()
+                if key._get_value() == index:
+                    return child._get_value()
+
+                # Read comma
+                self.bj._skip_whitespace()
+                if self.bj._skip_if_next(','):
+                    self.bj._skip_whitespace()
+                elif self.bj._is_next('}'):
+                    raise KeyError('Key not found!')
+                else:
+                    raise Exception('Expected "," or "}"!')
 
         elif self.type == Node.TYPE_STRING:
 
