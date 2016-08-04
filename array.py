@@ -56,10 +56,13 @@ class Array:
             raise IndexError('Out of range!')
 
         while True:
-            element = self.reader.read(read_all=True)
-
+            # If this is the requested element, then it doesn't
+            # need to be read fully. If not, then its bytes
+            # should be skipped, and it needs to be fully read.
             if index == 0:
-                return element
+                return self.reader.read(read_all=False)
+            else:
+                self.reader.read(read_all=True)
 
             # Skip comma and whitespace around it
             self.reader._skip_whitespace()

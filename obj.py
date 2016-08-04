@@ -81,10 +81,13 @@ class Object:
                 raise Exception('Missing ":"!')
             self.reader._skip_whitespace()
 
-            # Read value and return it if the key matches.
-            value = self.reader.read(read_all=True)
+            # If this is the requested value, then it doesn't
+            # need to be read fully. If not, then its bytes
+            # should be skipped, and it needs to be fully read.
             if key2 == key:
-                return value
+                return self.reader.read(read_all=False)
+            else:
+                self.reader.read(read_all=True)
 
             # Skip comma and whitespace around it
             self.reader._skip_whitespace()
