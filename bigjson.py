@@ -255,7 +255,7 @@ class Node:
                 if key._get_value() == index:
                     return child._get_value()
 
-                # Read comma
+                # Read comma or "}"
                 self.bj._skip_whitespace()
                 if self.bj._skip_if_next(','):
                     self.bj._skip_whitespace()
@@ -295,7 +295,54 @@ class Node:
             return
 
         if self.type == Node.TYPE_ARRAY:
-            raise Exception('Not implemented yet!')
+
+            self.bj._seek(self.children_begin)
+            self.bj._skip_whitespace()
+            if self.bj._skip_if_next(']'):
+                return
+            while True:
+                child = Node(self.bj)
+                child._read_fully()
+
+                # Skip comma and whitespace around it
+                self.bj._skip_whitespace()
+                if self.bj._skip_if_next(','):
+                    self.bj._skip_whitespace()
+                elif self.bj._skip_if_next(']'):
+                    break
+                else:
+                    raise Exception('Expected "," or "]"!')
 
         else:
-            raise Exception('Not implemented yet!')
+
+            self.bj._seek(self.children_begin)
+            self.bj._skip_whitespace()
+
+            if self.bj._skip_if_next('}'):
+                return
+
+            while True:
+
+                # Read key
+                key = Node(self.bj)
+                if key.type != Node.TYPE_STRING:
+                    raise Exception('Invalid key type in JSON!')
+
+                # Read colon
+                self.bj._skip_whitespace()
+                if not self.bj._skip_if_next(':'):
+                    raise Exception('Missing ":"!')
+                self.bj._skip_whitespace()
+
+                # Read child
+                child = Node(self.bj)
+                child._read_fully()
+
+                # Read comma or "}"
+                self.bj._skip_whitespace()
+                if self.bj._skip_if_next(','):
+                    self.bj._skip_whitespace()
+                elif self.bj._skip_if_next('}'):
+                    break
+                else:
+                    raise Exception('Expected "," or "}"!')
