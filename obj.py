@@ -10,6 +10,54 @@ class Object:
 
         self._read_all()
 
+    def keys(self):
+        return [keyvalue[0] for keyvalue in self.iteritems()]
+
+    def values(self):
+        return [keyvalue[1] for keyvalue in self.iteritems()]
+
+    def items(self):
+        return [keyvalue for keyvalue in self.iteritems()]
+
+    def iteritems(self):
+        self.reader._seek(self.begin_pos)
+
+        if not self.reader._skip_if_next('{'):
+            raise Exception('Missing "{"!')
+
+        self.reader._skip_whitespace()
+
+        if self.reader._skip_if_next('}'):
+            return
+
+        while True:
+            # Read key. Reading all is not required, because strings
+            # are read fully anyway, and if it is not string, then
+            # there is an error and reading can be canceled.
+            key = self.reader.read(read_all=False)
+            if not isinstance(key, basestring):
+                raise Exception('Invalid key type in JSON object!')
+
+            # Skip colon and whitespace around it
+            self.reader._skip_whitespace()
+            if not self.reader._skip_if_next(':'):
+                raise Exception('Missing ":"!')
+            self.reader._skip_whitespace()
+
+            # Read value
+            value = self.reader.read(read_all=True)
+
+            yield (key, value)
+
+            # Read comma or "}" and whitespace around it.
+            self.reader._skip_whitespace()
+            if self.reader._skip_if_next(','):
+                self.reader._skip_whitespace()
+            elif self.reader._skip_if_next('}'):
+                break
+            else:
+                raise Exception('Expected "," or "}"!')
+
     def _read_all(self):
         """ Reads and validates all bytes in
         the Object. Also counts its length.
