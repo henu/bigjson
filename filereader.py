@@ -44,7 +44,7 @@ class FileReader:
             if self._peek() == '.':
                 self._get()
                 num += '.' + self._get()
-                if num[-1] not in '0123456790':
+                if num[-1] not in '01234567890':
                     raise Exception('Expected digit after dot!')
                 while self._peek() in '0123456789':
                     num += self._get()
