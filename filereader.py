@@ -12,6 +12,8 @@ class FileReader:
 
         # This buffer is for reading and peeking
         self.readbuf = ''
+        self.readbuf_read = 0
+        self.readbuf_pos = 0
 
     def read(self, read_all=False):
         self._skip_whitespace()
@@ -120,62 +122,75 @@ class FileReader:
 
     def _skip_whitespace(self):
         while True:
-            # Read whitespace from current readbuffer
-            whitespace_in_readbuf = 0
-            while whitespace_in_readbuf < len(self.readbuf) and self.readbuf[whitespace_in_readbuf] in FileReader._WHITESPACE:
-                whitespace_in_readbuf += 1
-            self.readbuf = self.readbuf[whitespace_in_readbuf:]
+            self._ensure_readbuf_left(1)
+            if len(self.readbuf) - self.readbuf_read < 1:
+                break
 
-            # If readbuffer is not empty, then read more
-            if len(self.readbuf) > 0:
-                return
+            if self.readbuf[self.readbuf_read] not in FileReader._WHITESPACE:
+                break
 
-            # Readbuffer is empty, so load more
-            self._fill_readbuf(FileReader._READBUF_CHUNK_SIZE)
+            self.readbuf_read += 1
 
     def _get(self):
-        self._fill_readbuf(1)
-        if len(self.readbuf) == 0:
+        self._ensure_readbuf_left(1)
+        if len(self.readbuf) - self.readbuf_read < 1:
             raise Exception('Unexpected end of file when getting next byte!')
-        result = self.readbuf[0]
-        self.readbuf = self.readbuf[1:]
+        result = self.readbuf[self.readbuf_read]
+        self.readbuf_read += 1
         return result
 
     def _read(self, amount):
-        self._fill_readbuf(amount)
-        if len(self.readbuf) < amount:
-            raise Exception('Unexpected end of file when getting next byte!')
-        result = self.readbuf[:amount]
-        self.readbuf = self.readbuf[amount:]
+        self._ensure_readbuf_left(amount)
+        if len(self.readbuf) - self.readbuf_read < amount:
+            raise Exception('Unexpected end of file reading a chunk!')
+        result = self.readbuf[self.readbuf_read:self.readbuf_read+amount]
+        self.readbuf_read += amount
         return result
 
     def _peek(self):
-        self._fill_readbuf(1)
-        if len(self.readbuf) == 0:
+        self._ensure_readbuf_left(1)
+        if len(self.readbuf) - self.readbuf_read < 1:
             return None
-        return self.readbuf[0]
+        return self.readbuf[self.readbuf_read]
 
     def _is_next(self, s):
-        self._fill_readbuf(len(s))
-        return self.readbuf.startswith(s)
+        s_len = len(s)
+        self._ensure_readbuf_left(s_len)
+        if len(self.readbuf) - self.readbuf_read < s_len:
+            return False
+        for i in range(s_len):
+            if self.readbuf[self.readbuf_read + i] != s[i]:
+                return False
+        return True
 
     def _skip_if_next(self, s):
         """ If next bytes are same as in 's', then skip them and return True.
         """
         if self._is_next(s):
-            self.readbuf = self.readbuf[len(s):]
+            self.readbuf_read += len(s)
             return True
         return False
 
-    def _fill_readbuf(self, desired_size):
-        read_amount = desired_size - len(self.readbuf)
-        if read_amount <= 0:
+    def _ensure_readbuf_left(self, minimum_left):
+        if len(self.readbuf) - self.readbuf_read >= minimum_left:
             return
-        self.readbuf += self.file.read(read_amount)
+        read_amount = max(minimum_left, FileReader._READBUF_CHUNK_SIZE) - (len(self.readbuf) - self.readbuf_read)
+        self.readbuf_pos += self.readbuf_read
+        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount)
+        self.readbuf_read = 0
 
     def _tell_read_pos(self):
-        return self.file.tell() - len(self.readbuf)
+        return self.readbuf_pos + self.readbuf_read
 
     def _seek(self, pos):
-        self.readbuf = u''
-        self.file.seek(pos)
+        # If position is at the area of
+        # readbuffer, then just rewind it.
+        if pos >= self.readbuf_pos and pos <= self.readbuf_pos + len(self.readbuf):
+            self.readbuf_read = pos - self.readbuf_pos
+        # If position is outside the readbuffer,
+        # then read buffer from scratch
+        else:
+            self.readbuf = ''
+            self.readbuf_read = 0
+            self.readbuf_pos = pos
+            self.file.seek(pos)
