@@ -15,7 +15,10 @@ class FileReader:
         self.readbuf_read = 0
         self.readbuf_pos = 0
 
-    def read(self, read_all=False):
+    def read(self, read_all=False, to_python=False):
+        # "to_python" cannot be set without "read_all"
+        assert read_all or not to_python
+
         self._skip_whitespace()
 
         # None
@@ -112,11 +115,19 @@ class FileReader:
 
         # Array
         if self._peek() == '[':
-            return Array(self, read_all)
+            if to_python:
+                array = Array(self, False)
+                return array.to_python()
+            else:
+                return Array(self, read_all)
 
         # Object
         if self._peek() == '{':
-            return Object(self, read_all)
+            if to_python:
+                obj = Object(self, False)
+                return obj.to_python()
+            else:
+                return Object(self, read_all)
 
         raise Exception(u'Unexpected bytes!')
 

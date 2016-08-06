@@ -18,10 +18,21 @@ class Array:
 
         self._read_all()
 
-    def _read_all(self):
+    def to_python(self):
+        self.reader._seek(self.begin_pos)
+        return self._read_all(to_python=True)
+
+    def _read_all(self, to_python=False):
         """ Reads and validates all bytes in
         the Array. Also counts its length.
+
+        If 'to_python' is set to true, then returns list.
         """
+        if to_python:
+            python_list = []
+        else:
+            python_list = None
+
         self.length = 0
 
         self.reader._seek(self.begin_pos)
@@ -32,11 +43,14 @@ class Array:
         self.reader._skip_whitespace()
 
         if self.reader._skip_if_next(']'):
-            return
+            return python_list
 
         while True:
-            # Skip element
-            self.reader.read(read_all=True)
+            # Skip or read element
+            if to_python:
+                python_list.append(self.reader.read(read_all=True, to_python=True))
+            else:
+                self.reader.read(read_all=True)
 
             self.length += 1
 
@@ -48,6 +62,8 @@ class Array:
                 break
             else:
                 raise Exception(u'Expected "," or "]"!')
+
+        return python_list
 
     def __getitem__(self, index):
         # TODO: Support negative indexes!

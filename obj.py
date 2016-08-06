@@ -65,10 +65,21 @@ class Object:
     def get(self, key, default=None):
         return self._get(key, default, Object._GET_METHOD_RETURN_DEFAULT)
 
-    def _read_all(self):
+    def to_python(self):
+        self.reader._seek(self.begin_pos)
+        return self._read_all(to_python=True)
+
+    def _read_all(self, to_python=False):
         """ Reads and validates all bytes in
         the Object. Also counts its length.
+
+        If 'to_python' is set to true, then returns dict.
         """
+        if to_python:
+            python_dict = {}
+        else:
+            python_dict = None
+
         self.length = 0
 
         self.reader._seek(self.begin_pos)
@@ -79,7 +90,7 @@ class Object:
         self.reader._skip_whitespace()
 
         if self.reader._skip_if_next('}'):
-            return
+            return python_dict
 
         while True:
             # Skip key. Reading all is not required, because strings
@@ -95,8 +106,11 @@ class Object:
                 raise Exception(u'Missing ":"!')
             self.reader._skip_whitespace()
 
-            # Skip value
-            self.reader.read(read_all=True)
+            # Skip or read value
+            if to_python:
+                python_dict[key] = self.reader.read(read_all=True, to_python=True)
+            else:
+                self.reader.read(read_all=True)
 
             self.length += 1
 
@@ -108,6 +122,8 @@ class Object:
                 break
             else:
                 raise Exception(u'Expected "," or "}"!')
+
+        return python_dict
 
     def __contains__(self, key):
         return self._get(key, None, Object._GET_METHOD_RETURN_BOOLEAN)
