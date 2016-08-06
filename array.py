@@ -5,6 +5,10 @@ class Array:
         self.begin_pos = self.reader._tell_read_pos()
         self.length = -1
 
+        # For optimizing index queries
+        self.last_known_pos = 0
+        self.last_known_pos_index = 0
+
         if not read_all:
             return
 
@@ -46,9 +50,16 @@ class Array:
 
         # TODO: Use some kind of lookup table!
 
-        # Rewind to requested element from the beginning
-        self.reader._seek(self.begin_pos)
-        if not self.reader._skip_if_next('['):
+        # Find best known position to rewind to requested index
+        if index >= self.last_known_pos_index:
+            seek_index = self.last_known_pos_index
+            seek_pos = self.last_known_pos
+        else:
+            seek_index = 0
+            seek_pos = 0
+
+        self.reader._seek(seek_pos)
+        if seek_index == 0 and not self.reader._skip_if_next('['):
             raise Exception('Missing "["!')
         self.reader._skip_whitespace()
 
@@ -59,7 +70,7 @@ class Array:
             # If this is the requested element, then it doesn't
             # need to be read fully. If not, then its bytes
             # should be skipped, and it needs to be fully read.
-            if index == 0:
+            if index == seek_index:
                 return self.reader.read(read_all=False)
             else:
                 self.reader.read(read_all=True)
@@ -73,7 +84,11 @@ class Array:
             else:
                 raise Exception('Expected "," or "]"!')
 
-            index -= 1
+            seek_index += 1
+
+            if seek_index > self.last_known_pos_index:
+                self.last_known_pos_index = seek_index
+                self.last_known_pos = self.reader._tell_read_pos()
 
     def __len__(self):
         if self.length < 0:
