@@ -45,7 +45,7 @@ class FileReader:
                 self._get()
                 num += '.' + self._get()
                 if num[-1] not in '01234567890':
-                    raise Exception('Expected digit after dot!')
+                    raise Exception(u'Expected digit after dot!')
                 while self._peek() in '0123456789':
                     num += self._get()
                 num = float(num)
@@ -118,7 +118,7 @@ class FileReader:
         if self._peek() == '{':
             return Object(self, read_all)
 
-        raise Exception('Unexpected bytes!')
+        raise Exception(u'Unexpected bytes!')
 
     def _skip_whitespace(self):
         while True:
@@ -134,7 +134,7 @@ class FileReader:
     def _get(self):
         self._ensure_readbuf_left(1)
         if len(self.readbuf) - self.readbuf_read < 1:
-            raise Exception('Unexpected end of file when getting next byte!')
+            raise Exception(u'Unexpected end of file when getting next byte!')
         result = self.readbuf[self.readbuf_read]
         self.readbuf_read += 1
         return result
@@ -142,7 +142,7 @@ class FileReader:
     def _read(self, amount):
         self._ensure_readbuf_left(amount)
         if len(self.readbuf) - self.readbuf_read < amount:
-            raise Exception('Unexpected end of file reading a chunk!')
+            raise Exception(u'Unexpected end of file reading a chunk!')
         result = self.readbuf[self.readbuf_read:self.readbuf_read+amount]
         self.readbuf_read += amount
         return result

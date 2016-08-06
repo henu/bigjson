@@ -23,7 +23,7 @@ class Object:
         self.reader._seek(self.begin_pos)
 
         if not self.reader._skip_if_next('{'):
-            raise Exception('Missing "{"!')
+            raise Exception(u'Missing "{"!')
 
         self.reader._skip_whitespace()
 
@@ -36,12 +36,12 @@ class Object:
             # there is an error and reading can be canceled.
             key = self.reader.read(read_all=False)
             if not isinstance(key, basestring):
-                raise Exception('Invalid key type in JSON object!')
+                raise Exception(u'Invalid key type in JSON object!')
 
             # Skip colon and whitespace around it
             self.reader._skip_whitespace()
             if not self.reader._skip_if_next(':'):
-                raise Exception('Missing ":"!')
+                raise Exception(u'Missing ":"!')
             self.reader._skip_whitespace()
 
             # Read value
@@ -56,7 +56,7 @@ class Object:
             elif self.reader._skip_if_next('}'):
                 break
             else:
-                raise Exception('Expected "," or "}"!')
+                raise Exception(u'Expected "," or "}"!')
 
     def get(self, key, default=None):
         return self._get(key, default, False)
@@ -70,7 +70,7 @@ class Object:
         self.reader._seek(self.begin_pos)
 
         if not self.reader._skip_if_next('{'):
-            raise Exception('Missing "{"!')
+            raise Exception(u'Missing "{"!')
 
         self.reader._skip_whitespace()
 
@@ -83,12 +83,12 @@ class Object:
             # there is an error and reading can be canceled.
             key = self.reader.read(read_all=False)
             if not isinstance(key, basestring):
-                raise Exception('Invalid key type in JSON object!')
+                raise Exception(u'Invalid key type in JSON object!')
 
             # Skip colon and whitespace around it
             self.reader._skip_whitespace()
             if not self.reader._skip_if_next(':'):
-                raise Exception('Missing ":"!')
+                raise Exception(u'Missing ":"!')
             self.reader._skip_whitespace()
 
             # Skip value
@@ -103,7 +103,7 @@ class Object:
             elif self.reader._skip_if_next('}'):
                 break
             else:
-                raise Exception('Expected "," or "}"!')
+                raise Exception(u'Expected "," or "}"!')
 
     def __getitem__(self, key):
         return self._get(key, None, True)
@@ -118,7 +118,7 @@ class Object:
         # Rewind to requested element from the beginning
         self.reader._seek(self.begin_pos)
         if not self.reader._skip_if_next('{'):
-            raise Exception('Missing "{"!')
+            raise Exception(u'Missing "{"!')
         self.reader._skip_whitespace()
 
         if self.reader._is_next('}'):
@@ -130,12 +130,12 @@ class Object:
         while True:
             key2 = self.reader.read(read_all=False)
             if not isinstance(key2, basestring):
-                raise Exception('Invalid key type in JSON object!')
+                raise Exception(u'Invalid key type in JSON object!')
 
             # Read colon
             self.reader._skip_whitespace()
             if not self.reader._skip_if_next(':'):
-                raise Exception('Missing ":"!')
+                raise Exception(u'Missing ":"!')
             self.reader._skip_whitespace()
 
             # If this is the requested value, then it doesn't
@@ -156,7 +156,7 @@ class Object:
                 else:
                     return None
             else:
-                raise Exception('Expected "," or "}"!')
+                raise Exception(u'Expected "," or "}"!')
 
     def __len__(self):
         if self.length < 0:

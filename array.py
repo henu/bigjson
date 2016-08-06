@@ -27,7 +27,7 @@ class Array:
         self.reader._seek(self.begin_pos)
 
         if not self.reader._skip_if_next('['):
-            raise Exception('Missing "["!')
+            raise Exception(u'Missing "["!')
 
         self.reader._skip_whitespace()
 
@@ -47,7 +47,7 @@ class Array:
             elif self.reader._skip_if_next(']'):
                 break
             else:
-                raise Exception('Expected "," or "]"!')
+                raise Exception(u'Expected "," or "]"!')
 
     def __getitem__(self, index):
         # TODO: Support negative indexes!
@@ -77,11 +77,11 @@ class Array:
 
         self.reader._seek(seek_pos)
         if seek_index == 0 and not self.reader._skip_if_next('['):
-            raise Exception('Missing "["!')
+            raise Exception(u'Missing "["!')
         self.reader._skip_whitespace()
 
         if self.reader._is_next(']'):
-            raise IndexError('Out of range!')
+            raise IndexError(u'Out of range!')
 
         while True:
             # If this is the requested element, then it doesn't
@@ -97,9 +97,9 @@ class Array:
             if self.reader._skip_if_next(','):
                 self.reader._skip_whitespace()
             elif self.reader._is_next(']'):
-                raise IndexError('Out of range!')
+                raise IndexError(u'Out of range!')
             else:
-                raise Exception('Expected "," or "]"!')
+                raise Exception(u'Expected "," or "]"!')
 
             seek_index += 1
 
