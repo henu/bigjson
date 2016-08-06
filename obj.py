@@ -1,5 +1,9 @@
 class Object:
 
+    _GET_METHOD_RAISE_EXCEPTION = 0
+    _GET_METHOD_RETURN_DEFAULT = 1
+    _GET_METHOD_RETURN_BOOLEAN = 2
+
     def __init__(self, reader, read_all):
         self.reader = reader
         self.begin_pos = self.reader._tell_read_pos()
@@ -59,7 +63,7 @@ class Object:
                 raise Exception(u'Expected "," or "}"!')
 
     def get(self, key, default=None):
-        return self._get(key, default, False)
+        return self._get(key, default, Object._GET_METHOD_RETURN_DEFAULT)
 
     def _read_all(self):
         """ Reads and validates all bytes in
@@ -105,10 +109,13 @@ class Object:
             else:
                 raise Exception(u'Expected "," or "}"!')
 
-    def __getitem__(self, key):
-        return self._get(key, None, True)
+    def __contains__(self, key):
+        return self._get(key, None, Object._GET_METHOD_RETURN_BOOLEAN)
 
-    def _get(self, key, default, raise_exception):
+    def __getitem__(self, key):
+        return self._get(key, None, Object._GET_METHOD_RAISE_EXCEPTION)
+
+    def _get(self, key, default, method):
 
         if not isinstance(key, basestring):
             raise TypeError(u'Key must be string!')
@@ -122,10 +129,12 @@ class Object:
         self.reader._skip_whitespace()
 
         if self.reader._is_next('}'):
-            if raise_exception:
+            if method == Object._GET_METHOD_RAISE_EXCEPTION:
                 raise KeyError(key)
-            else:
+            elif method == Object._GET_METHOD_RETURN_DEFAULT:
                 return None
+            else:
+                return False
 
         while True:
             key2 = self.reader.read(read_all=False)
@@ -142,7 +151,10 @@ class Object:
             # need to be read fully. If not, then its bytes
             # should be skipped, and it needs to be fully read.
             if key2 == key:
-                return self.reader.read(read_all=False)
+                if method == Object._GET_METHOD_RETURN_BOOLEAN:
+                    return True
+                else:
+                    return self.reader.read(read_all=False)
             else:
                 self.reader.read(read_all=True)
 
@@ -151,10 +163,12 @@ class Object:
             if self.reader._skip_if_next(','):
                 self.reader._skip_whitespace()
             elif self.reader._is_next('}'):
-                if raise_exception:
+                if method == Object._GET_METHOD_RAISE_EXCEPTION:
                     raise KeyError(key)
-                else:
+                elif method == Object._GET_METHOD_RETURN_DEFAULT:
                     return None
+                else:
+                    return False
             else:
                 raise Exception(u'Expected "," or "}"!')
 
