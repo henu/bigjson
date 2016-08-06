@@ -9,7 +9,7 @@ the file only when necessary and then forget it to save memory.
 TODO
 ----
 
-- Make reading faster. One idea is to use some kind of lookup tables in Array and in Object.
+- Make reading faster. One idea is to use some kind of lookup table in Object.
 
 - Do not read strings as Python strings, as those need to be readed fully into memory.
 
