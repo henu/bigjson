@@ -58,6 +58,9 @@ class Object:
             else:
                 raise Exception('Expected "," or "}"!')
 
+    def get(self, key, default=None):
+        return self._get(key, default, False)
+
     def _read_all(self):
         """ Reads and validates all bytes in
         the Object. Also counts its length.
@@ -103,6 +106,9 @@ class Object:
                 raise Exception('Expected "," or "}"!')
 
     def __getitem__(self, key):
+        return self._get(key, None, True)
+
+    def _get(self, key, default, raise_exception):
 
         if not isinstance(key, basestring):
             raise TypeError(u'Key must be string!')
@@ -116,7 +122,10 @@ class Object:
         self.reader._skip_whitespace()
 
         if self.reader._is_next('}'):
-            raise KeyError('Key not found!')
+            if raise_exception:
+                raise KeyError(key)
+            else:
+                return None
 
         while True:
             key2 = self.reader.read(read_all=False)
@@ -142,7 +151,10 @@ class Object:
             if self.reader._skip_if_next(','):
                 self.reader._skip_whitespace()
             elif self.reader._is_next('}'):
-                raise KeyError('Key not found!')
+                if raise_exception:
+                    raise KeyError(key)
+                else:
+                    return None
             else:
                 raise Exception('Expected "," or "}"!')
 
