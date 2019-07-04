@@ -1,5 +1,5 @@
-from array import Array
-from obj import Object
+from .array import Array
+from .obj import Object
 
 
 class FileReader:
@@ -104,7 +104,7 @@ class FileReader:
                         string += u'\t'
                     elif c == u'u':
                         unicode_bytes = self._read(4)
-                        string += ('\\u' + unicode_bytes).decode('unicode_escape')
+                        string += ('\\u' + unicode_bytes).encode('ascii').decode('unicode_escape')
                     else:
                         raise Exception(u'Unexpected {} in backslash encoding!'.format(c))
 
@@ -187,7 +187,7 @@ class FileReader:
             return
         read_amount = max(minimum_left, FileReader._READBUF_CHUNK_SIZE) - (len(self.readbuf) - self.readbuf_read)
         self.readbuf_pos += self.readbuf_read
-        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount)
+        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount).decode('ascii')
         self.readbuf_read = 0
 
     def _tell_read_pos(self):

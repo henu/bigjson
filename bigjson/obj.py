@@ -1,3 +1,12 @@
+import sys
+
+
+if sys.version[0] == '2':
+    string_types = basestring
+else:
+    string_types = str
+
+
 class Object:
 
     _GET_METHOD_RAISE_EXCEPTION = 0
@@ -39,7 +48,7 @@ class Object:
             # are read fully anyway, and if it is not string, then
             # there is an error and reading can be canceled.
             key = self.reader.read(read_all=False)
-            if not isinstance(key, basestring):
+            if not isinstance(key, string_types):
                 raise Exception(u'Invalid key type in JSON object!')
 
             # Skip colon and whitespace around it
@@ -97,7 +106,7 @@ class Object:
             # are read fully anyway, and if it is not string, then
             # there is an error and reading can be canceled.
             key = self.reader.read(read_all=False)
-            if not isinstance(key, basestring):
+            if not isinstance(key, string_types):
                 raise Exception(u'Invalid key type in JSON object!')
 
             # Skip colon and whitespace around it
@@ -133,7 +142,7 @@ class Object:
 
     def _get(self, key, default, method):
 
-        if not isinstance(key, basestring):
+        if not isinstance(key, string_types):
             raise TypeError(u'Key must be string!')
 
         # TODO: Use some kind of lookup table!
@@ -154,7 +163,7 @@ class Object:
 
         while True:
             key2 = self.reader.read(read_all=False)
-            if not isinstance(key2, basestring):
+            if not isinstance(key2, string_types):
                 raise Exception(u'Invalid key type in JSON object!')
 
             # Read colon
