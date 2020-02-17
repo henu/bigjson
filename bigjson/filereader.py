@@ -7,8 +7,9 @@ class FileReader:
     _WHITESPACE = '\t\n '
     _READBUF_CHUNK_SIZE = 1024*1024
 
-    def __init__(self, file):
+    def __init__(self, file, encoding):
         self.file = file
+        self.encoding = encoding
 
         # This buffer is for reading and peeking
         self.readbuf = ''
@@ -104,7 +105,7 @@ class FileReader:
                         string += u'\t'
                     elif c == u'u':
                         unicode_bytes = self._read(4)
-                        string += ('\\u' + unicode_bytes).encode('ascii').decode('unicode_escape')
+                        string += ('\\u' + unicode_bytes).encode(self.encoding).decode('unicode_escape')
                     else:
                         raise Exception(u'Unexpected {} in backslash encoding!'.format(c))
 
@@ -187,7 +188,7 @@ class FileReader:
             return
         read_amount = max(minimum_left, FileReader._READBUF_CHUNK_SIZE) - (len(self.readbuf) - self.readbuf_read)
         self.readbuf_pos += self.readbuf_read
-        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount).decode('ascii')
+        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount).decode(self.encoding)
         self.readbuf_read = 0
 
     def _tell_read_pos(self):
