@@ -1,4 +1,5 @@
 *.pyc
+/.cache/
 /build/
 /bigjson.egg-info/
 /dist/

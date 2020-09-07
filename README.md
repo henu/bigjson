@@ -21,3 +21,11 @@ with open('wikidata-latest-all.json', 'rb') as f:
     print element['type']
     print element['id']
 ```
+
+
+Testing
+=======
+
+```
+pytest .
+```
