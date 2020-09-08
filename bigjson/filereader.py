@@ -4,7 +4,7 @@ from .obj import Object
 
 class FileReader:
 
-    _WHITESPACE = '\t\n '
+    _WHITESPACE = '\t\n\r '
     _READBUF_CHUNK_SIZE = 1024*1024
 
     def __init__(self, file, encoding):

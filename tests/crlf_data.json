@@ -1,0 +1,31 @@
+{
+  "par1": "val1",
+  "nested_list1": [
+    {
+      "sub_nested1": "val2",
+      "sub_nested_arr1": [
+        {
+          "ssn_1": "v1",
+          "ssn2": "v2"
+        },
+        {
+          "ssn1": "v3",
+          "ssn2": "v4"
+        }
+      ]
+    },
+    {
+      "sub_nested2": "val3",
+      "sub_nested_arr2": [
+        {
+          "ssn1": "v5",
+          "ssn2": "v6"
+        },
+        {
+          "ssn1": "v7",
+          "ssn2": "v8"
+        }
+      ]
+    }
+  ]
+}

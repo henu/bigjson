@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='bigjson',
-    version='1.0.2',
+    version='1.0.3',
     packages=['bigjson'],
     description='Python library that reads JSON files of any size.',
     author='Henrik Heino',
