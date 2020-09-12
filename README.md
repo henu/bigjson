@@ -6,6 +6,8 @@ Python library that reads JSON files of any size.
 The magic is in the Array and Object types.
 They load stuff from the file only when necessary.
 
+The library expects files to be opened in binary mode.
+
 
 Example
 -------

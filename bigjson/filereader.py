@@ -4,15 +4,16 @@ from .obj import Object
 
 class FileReader:
 
-    _WHITESPACE = '\t\n\r '
+    _WHITESPACE = b'\t\n\r '
     _READBUF_CHUNK_SIZE = 1024*1024
 
     def __init__(self, file, encoding):
         self.file = file
+        # TODO: Support encodings where basic shortest characters are longer than one byte (e.g. UTF-16 and UTF-32)!
         self.encoding = encoding
 
         # This buffer is for reading and peeking
-        self.readbuf = ''
+        self.readbuf = b''
         self.readbuf_read = 0
         self.readbuf_pos = 0
 
@@ -35,37 +36,37 @@ class FileReader:
             return True
 
         # Number
-        if self._peek() in '-0123456789':
+        if self._peek() in b'-0123456789':
             num = self._get()
             # Check sign
-            if num == '-':
+            if num == b'-':
                 num += self._get()
             # Read integer part
-            if num[-1] != '0':
-                while self._peek() in '0123456789':
+            if num[-1] != b'0':
+                while self._peek() in b'0123456789':
                     num += self._get()
             # Read possible decimal part and convert to float
-            if self._peek() == '.':
+            if self._peek() == b'.':
                 self._get()
-                num += '.' + self._get()
-                if num[-1] not in '01234567890':
-                    raise Exception(u'Expected digit after dot!')
-                while self._peek() in '0123456789':
+                num += b'.' + self._get()
+                if num[-1] not in b'01234567890':
+                    raise Exception('Expected digit after dot!')
+                while self._peek() in b'0123456789':
                     num += self._get()
                 num = float(num)
             else:
                 num = int(num)
             # Read possible exponent
-            if self._peek() in 'eE':
+            if self._peek() in b'eE':
                 self._get()
                 exp = self._get()
                 exp_neg = False
-                if exp == '-':
+                if exp == b'-':
                     exp_neg = True
                     exp = self._get()
-                elif exp == '+':
+                elif exp == b'+':
                     exp = self._get()
-                while self._peek() in '0123456789':
+                while self._peek() in b'0123456789':
                     exp += self._get()
                 exp = int(exp)
                 exp = 10 ** exp
@@ -77,45 +78,45 @@ class FileReader:
 
         # String
         if self._skip_if_next('"'):
-            string = u''
+            string = b''
 
             while True:
                 c = self._get()
 
-                if c == u'"':
+                if c == b'"':
                     break
 
-                if c == u'\\':
+                if c == b'\\':
                     c = self._get()
-                    if c == u'"':
-                        string += u'"'
-                    elif c == u'\\':
-                        string += u'\\'
-                    elif c == u'/':
-                        string += u'/'
-                    elif c == u'b':
-                        string += u'\b'
-                    elif c == u'f':
-                        string += u'\f'
-                    elif c == u'n':
-                        string += u'\n'
-                    elif c == u'r':
-                        string += u'\r'
-                    elif c == u't':
-                        string += u'\t'
-                    elif c == u'u':
+                    if c == b'"':
+                        string += b'"'
+                    elif c == b'\\':
+                        string += b'\\'
+                    elif c == b'/':
+                        string += b'/'
+                    elif c == b'b':
+                        string += b'\b'
+                    elif c == b'f':
+                        string += b'\f'
+                    elif c == b'n':
+                        string += b'\n'
+                    elif c == b'r':
+                        string += b'\r'
+                    elif c == b't':
+                        string += b'\t'
+                    elif c == b'u':
                         unicode_bytes = self._read(4)
-                        string += ('\\u' + unicode_bytes).encode(self.encoding).decode('unicode_escape')
+                        string += (b'\\u' + unicode_bytes).decode('unicode_escape').encode(self.encoding)
                     else:
-                        raise Exception(u'Unexpected {} in backslash encoding!'.format(c))
+                        raise Exception('Unexpected {} in backslash encoding!'.format(c.decode('utf-8')))
 
                 else:
                     string += c
 
-            return string
+            return string.decode(self.encoding)
 
         # Array
-        if self._peek() == '[':
+        if self._peek() == b'[':
             if to_python:
                 array = Array(self, False)
                 return array.to_python()
@@ -123,39 +124,39 @@ class FileReader:
                 return Array(self, read_all)
 
         # Object
-        if self._peek() == '{':
+        if self._peek() == b'{':
             if to_python:
                 obj = Object(self, False)
                 return obj.to_python()
             else:
                 return Object(self, read_all)
 
-        raise Exception(u'Unexpected bytes!')
+        raise Exception('Unexpected bytes!')
 
     def _skip_whitespace(self):
         while True:
-            self._ensure_readbuf_left(1)
-            if len(self.readbuf) - self.readbuf_read < 1:
+            next_char = self._peek()
+            if next_char is None:
                 break
 
-            if self.readbuf[self.readbuf_read] not in FileReader._WHITESPACE:
+            if next_char not in FileReader._WHITESPACE:
                 break
 
-            self.readbuf_read += 1
+            self._get()
 
     def _get(self):
         self._ensure_readbuf_left(1)
         if len(self.readbuf) - self.readbuf_read < 1:
-            raise Exception(u'Unexpected end of file when getting next byte!')
-        result = self.readbuf[self.readbuf_read]
+            raise Exception('Unexpected end of file when getting next byte!')
+        result = self.readbuf[self.readbuf_read:self.readbuf_read + 1]
         self.readbuf_read += 1
         return result
 
     def _read(self, amount):
         self._ensure_readbuf_left(amount)
         if len(self.readbuf) - self.readbuf_read < amount:
-            raise Exception(u'Unexpected end of file reading a chunk!')
-        result = self.readbuf[self.readbuf_read:self.readbuf_read+amount]
+            raise Exception('Unexpected end of file reading a chunk!')
+        result = self.readbuf[self.readbuf_read:self.readbuf_read + amount]
         self.readbuf_read += amount
         return result
 
@@ -163,21 +164,22 @@ class FileReader:
         self._ensure_readbuf_left(1)
         if len(self.readbuf) - self.readbuf_read < 1:
             return None
-        return self.readbuf[self.readbuf_read]
+        return self.readbuf[self.readbuf_read:self.readbuf_read + 1]
 
     def _is_next(self, s):
+        if not isinstance(s, bytes):
+            s = s.encode(self.encoding)
         s_len = len(s)
         self._ensure_readbuf_left(s_len)
         if len(self.readbuf) - self.readbuf_read < s_len:
             return False
-        for i in range(s_len):
-            if self.readbuf[self.readbuf_read + i] != s[i]:
-                return False
-        return True
+        return self.readbuf[self.readbuf_read:self.readbuf_read + s_len] == s
 
     def _skip_if_next(self, s):
         """ If next bytes are same as in 's', then skip them and return True.
         """
+        if not isinstance(s, bytes):
+            s = s.encode(self.encoding)
         if self._is_next(s):
             self.readbuf_read += len(s)
             return True
@@ -188,7 +190,8 @@ class FileReader:
             return
         read_amount = max(minimum_left, FileReader._READBUF_CHUNK_SIZE) - (len(self.readbuf) - self.readbuf_read)
         self.readbuf_pos += self.readbuf_read
-        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount).decode(self.encoding)
+        old_pos = self.file.tell()
+        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount)
         self.readbuf_read = 0
 
     def _tell_read_pos(self):
@@ -197,12 +200,12 @@ class FileReader:
     def _seek(self, pos):
         # If position is at the area of
         # readbuffer, then just rewind it.
-        if pos >= self.readbuf_pos and pos <= self.readbuf_pos + len(self.readbuf):
+        if pos >= self.readbuf_pos and pos < self.readbuf_pos + len(self.readbuf):
             self.readbuf_read = pos - self.readbuf_pos
         # If position is outside the readbuffer,
         # then read buffer from scratch
         else:
-            self.readbuf = ''
+            self.readbuf = b''
             self.readbuf_read = 0
             self.readbuf_pos = pos
             self.file.seek(pos)
