@@ -50,7 +50,7 @@ class FileReader:
                 self._get()
                 num += b'.' + self._get()
                 if num[-1] not in b'01234567890':
-                    raise Exception('Expected digit after dot!')
+                    raise Exception(u'Expected digit after dot! Position {}'.format(self.readbuf_read))
                 while self._peek() in b'0123456789':
                     num += self._get()
                 num = float(num)
@@ -108,7 +108,7 @@ class FileReader:
                         unicode_bytes = self._read(4)
                         string += (b'\\u' + unicode_bytes).decode('unicode_escape').encode(self.encoding)
                     else:
-                        raise Exception('Unexpected {} in backslash encoding!'.format(c.decode('utf-8')))
+                        raise Exception(u'Unexpected \\{} in backslash encoding! Position {}'.format(c.decode('utf-8'), self.readbuf_read - 1))
 
                 else:
                     string += c
@@ -131,7 +131,9 @@ class FileReader:
             else:
                 return Object(self, read_all)
 
-        raise Exception('Unexpected bytes!')
+        c = self._peek()
+
+        raise Exception(u'Unexpected bytes! Value \'{}\' Position {}'.format(c.decode('utf-8'), self.readbuf_read))
 
     def _skip_whitespace(self):
         while True:
@@ -147,7 +149,7 @@ class FileReader:
     def _get(self):
         self._ensure_readbuf_left(1)
         if len(self.readbuf) - self.readbuf_read < 1:
-            raise Exception('Unexpected end of file when getting next byte!')
+            raise Exception(u'Unexpected end of file when getting next byte!')
         result = self.readbuf[self.readbuf_read:self.readbuf_read + 1]
         self.readbuf_read += 1
         return result
@@ -155,7 +157,7 @@ class FileReader:
     def _read(self, amount):
         self._ensure_readbuf_left(amount)
         if len(self.readbuf) - self.readbuf_read < amount:
-            raise Exception('Unexpected end of file reading a chunk!')
+            raise Exception(u'Unexpected end of file reading a chunk!')
         result = self.readbuf[self.readbuf_read:self.readbuf_read + amount]
         self.readbuf_read += amount
         return result
