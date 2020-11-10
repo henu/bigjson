@@ -20,8 +20,8 @@ import bigjson
 with open('wikidata-latest-all.json', 'rb') as f:
     j = bigjson.load(f)
     element = j[4]
-    print element['type']
-    print element['id']
+    print(element['type'])
+    print(element['id'])
 ```
 
 
