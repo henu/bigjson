@@ -29,5 +29,5 @@ Testing
 =======
 
 ```
-pytest .
+pytest-3 .
 ```
