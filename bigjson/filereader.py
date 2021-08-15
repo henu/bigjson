@@ -105,15 +105,20 @@ class FileReader:
                     elif c == b't':
                         string += b'\t'
                     elif c == b'u':
-                        unicode_bytes = self._read(4)
-                        string += (b'\\u' + unicode_bytes).decode('unicode_escape').encode(self.encoding)
+                        # Deal with these later. They are hard to process now, since
+                        # they can have unicode surrogates and other tricky stuff.
+                        string += b'\\u'
                     else:
                         raise Exception(u'Unexpected \\{} in backslash encoding! Position {}'.format(c.decode('utf-8'), self.readbuf_read - 1))
 
                 else:
                     string += c
 
-            return string.decode(self.encoding)
+            # TODO: self.encoding should be used here...
+            # Convert from bytes to string. Handle unicode surrogates with UTF-16 trick
+            string = string.decode('unicode_escape').encode('utf-16', 'surrogatepass').decode('utf-16')
+
+            return string
 
         # Array
         if self._peek() == b'[':
