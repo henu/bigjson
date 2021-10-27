@@ -1,3 +1,7 @@
+v1.0.8
+
+- Fix problem with double backslashes.
+
 v1.0.7
 
 - Support unicode surrogates.
