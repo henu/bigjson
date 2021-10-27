@@ -105,20 +105,28 @@ class FileReader:
                     elif c == b't':
                         string += b'\t'
                     elif c == b'u':
-                        # Deal with these later. They are hard to process now, since
-                        # they can have unicode surrogates and other tricky stuff.
-                        string += b'\\u'
+                        # These unicode characters are difficult, as they might
+                        # consist of multiple characters following each others.
+                        u_string = b'\\u'
+                        while True:
+                            # Read four hex decimals
+                            for i in range(4):
+                                c = self._get()
+                                if c not in b'0123456789abcdefABCDEF':
+                                    raise Exception('Expected a hex character, but got {}!'.format(c))
+                                u_string += c
+                            # Is the hex string continuing?
+                            if not self._skip_if_next(b'\\u'):
+                                break
+                            u_string += b'\\u'
+                        string += u_string.decode('unicode_escape').encode('utf-16', 'surrogatepass').decode('utf-16').encode('utf-8')
                     else:
                         raise Exception(u'Unexpected \\{} in backslash encoding! Position {}'.format(c.decode('utf-8'), self.readbuf_read - 1))
 
                 else:
                     string += c
 
-            # TODO: self.encoding should be used here...
-            # Convert from bytes to string. Handle unicode surrogates with UTF-16 trick
-            string = string.decode('unicode_escape').encode('utf-16', 'surrogatepass').decode('utf-16')
-
-            return string
+            return string.decode('utf-8')
 
         # Array
         if self._peek() == b'[':
