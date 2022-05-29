@@ -7,7 +7,7 @@ class FileReader:
     _WHITESPACE = b'\t\n\r '
     _READBUF_CHUNK_SIZE = 1024*1024
 
-    def __init__(self, file, encoding):
+    def __init__(self, file, encoding="utf-8"):
         self.file = file
         # TODO: Support encodings where basic shortest characters are longer than one byte (e.g. UTF-16 and UTF-32)!
         self.encoding = encoding
@@ -206,7 +206,10 @@ class FileReader:
         read_amount = max(minimum_left, FileReader._READBUF_CHUNK_SIZE) - (len(self.readbuf) - self.readbuf_read)
         self.readbuf_pos += self.readbuf_read
         old_pos = self.file.tell()
-        self.readbuf = self.readbuf[self.readbuf_read:] + self.file.read(read_amount)
+        read_in = self.file.read(read_amount)
+        if not isinstance(read_in, bytes):
+            read_in = read_in.encode(self.encoding)
+        self.readbuf = self.readbuf[self.readbuf_read:] + read_in
         self.readbuf_read = 0
 
     def _tell_read_pos(self):
