@@ -13,9 +13,7 @@ def _load_data(self, mode):
     else:
         file_in =  open(DATA_JSON_PATH, mode)
 
-    json_obj = bigjson.load(file_in, encoding='utf-8')
-    file_in.close()
-    return json_obj
+    return bigjson.load(file_in, encoding='utf-8')
 
 
 class TestCrlfLineTerminators(TestCase):

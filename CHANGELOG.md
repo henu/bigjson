@@ -1,3 +1,7 @@
+v1.0.9
+
+- Fix UTF-8 loading problem. (thanks James C. McPherson!)
+
 v1.0.8
 
 - Fix problem with double backslashes.
