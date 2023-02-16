@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bigjson"
+version = "1.0.9"
+authors = [{name = "Henrik Heino", email = "henrik.heino@gmail.com"}]
+license = {text = "MIT"}
+description = "Python library that reads JSON files of any size."
+
+[project.urls]
+Homepage = "https://henu.fi/bigjson"
+"Source Code" = "https://github.com/henu/bigjson"
+"Issue Tracker" = "https://github.com/henu/bigjson/issues"
+
+[tool.setuptools]
+packages = ["bigjson"]
+include-package-data = false
