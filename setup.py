@@ -10,5 +10,9 @@ setup(
     author='Henrik Heino',
     author_email='henrik.heino@gmail.com',
     url='https://henu.fi/bigjson',
+    project_urls = {
+        "Source Code": "https://github.com/henu/bigjson",
+        "Issue Tracker": "https://github.com/henu/bigjson/issues",
+    },
     license='MIT',
 )
